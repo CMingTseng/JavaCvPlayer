@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -68,16 +67,6 @@ kotlin {
         }
         androidMain.dependencies {
             api(project(":core-video-android"))
-//            val media3Version = "1.8.0" // 或者您確認的確切版本
-//            implementation("androidx.media3:media3-exoplayer:$media3Version")
-//            implementation("androidx.media3:media3-ui:$media3Version") // 如果用到 UI 模塊
-//            implementation("androidx.media3:media3-common:$media3Version") // common 模塊包含了 Player 接口
-//            implementation("androidx.media3:media3-datasource-okhttp:$media3Version") // 如果用到
-            // ... 其他 Media3 模塊
-
-//            implementation(libs.org.bytedeco.javacv.platform)
-//            implementation(libs.org.bytedeco.ffmpeg.platform.gpl)
-//            implementation(libs.org.bytedeco.opencv.platform.gpu)
         }
     }
 }

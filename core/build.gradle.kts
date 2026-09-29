@@ -40,40 +40,50 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            implementation(libs.kotlin.stdlib)
-            implementation(libs.kotlinx.serialization.core)
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.coroutines.core)
-
-            implementation(libs.jetbrains.compose.runtime)
-
-
-            // Pure Kotlin Multiplatform dependencies
-//            implementation(libs.kotlinx.datetime)
-            implementation(libs.kermit)
-            compileOnly("com.github.cybernhl.media:lib-common-lite:727538c430")
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.jetbrains.compose.runtime)
+                implementation(libs.kermit)
+                compileOnly("com.github.cybernhl.media:lib-common-lite:727538c430")
+            }
         }
 
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
         }
 
-        jvmMain.dependencies {
-            compileOnly(libs.kotlinx.coroutines.swing)
-            compileOnly(libs.org.bytedeco.javacv.platform)
-//            compileOnly(libs.org.bytedeco.ffmpeg.platform.gpl)
-//            implementation(libs.org.bytedeco.opencv.platform.gpu)
+        val jvmCommon by creating {
+            dependsOn(commonMain)
+            dependencies {
+                compileOnly(libs.org.bytedeco.javacv.platform)
+                compileOnly(libs.org.bytedeco.ffmpeg.platform.gpl)
+            }
         }
-        androidMain.dependencies {
-            compileOnly(libs.kotlinx.coroutines.android)
+
+        val jvmMain by getting {
+            dependsOn(jvmCommon)
+            dependencies {
+                compileOnly(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        val androidMain by getting {
+            dependsOn(jvmCommon)
+            dependencies {
+                compileOnly(libs.kotlinx.coroutines.android)
+            }
         }
     }
 }
 
 android {
     namespace = "idv.neo.ffmpeg.media.player"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         minSdk = 21
     }

@@ -15,6 +15,7 @@ class JvmAudioSink : AudioSink {
     private var channels: Int = 2
     private var speed: Float = 1.0f
     private var byteBuffer: ByteBuffer? = null
+    private var reusableOutputBuffer: ShortArray? = null
 
     override var isRunning: Boolean = false
         get() = line?.isRunning ?: false
@@ -69,7 +70,11 @@ class JvmAudioSink : AudioSink {
         val s = sonic!!
         s.queueInput(data, offset, size)
         val outputSize = s.getOutputSize()
-        val outputBuffer = ShortArray(outputSize)
+        var outputBuffer = reusableOutputBuffer
+        if (outputBuffer == null || outputBuffer.size < outputSize) {
+            outputBuffer = ShortArray(outputSize)
+            reusableOutputBuffer = outputBuffer
+        }
         val count = s.getOutput(outputBuffer)
         if (count > 0) {
             writeToLine(outputBuffer, 0, count)
@@ -88,9 +93,7 @@ class JvmAudioSink : AudioSink {
             byteBuffer = bb
         }
         bb.clear()
-        for (i in offset until (offset + size)) {
-            bb.putShort(data[i])
-        }
+        bb.asShortBuffer().put(data, offset, size)
         
         val writtenBytes = l.write(bb.array(), 0, requiredBytes)
         return writtenBytes / (2 * channels)

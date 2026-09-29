@@ -1,6 +1,6 @@
 package idv.neo.ffmpeg.media.player.core
 
-import idv.neo.ffmpeg.media.player.core.audio.JvmAudioSink
+import idv.neo.ffmpeg.media.player.core.audio.AudioSink
 import idv.neo.ffmpeg.media.player.core.video.VideoSink
 import idv.neo.ffmpeg.media.player.core.video.VideoFrameOutput
 import idv.neo.ffmpeg.media.player.core.buffer.DefaultMediaFrameQueue
@@ -12,50 +12,94 @@ import co.touchlab.kermit.Logger
 import androidx.media3.common.Player
 import kotlin.coroutines.coroutineContext
 
+typealias JvmJavaCvPlayer = JavaCvPlayer
+
 /**
- * JVM 端的播放器具體實作。
- * 採用並行渲染循環架構，並解決可能導致黑屏的 Queue 阻塞死結問題。
+ * 通用的 JavaCvPlayer 實作。
+ * 僅依賴 [AudioSink] 與 [VideoSink] 介面，適用於 JVM 桌面端（Swing, JavaFX, Compose AWT/Skia）以及 Android 端。
  */
-class JvmJavaCvPlayer private constructor(
+class JavaCvPlayer private constructor(
     vQueue: DefaultMediaFrameQueue<JvmVideoFrame>,
     aQueue: DefaultMediaFrameQueue<JvmAudioFrame>,
-    aSink: JvmAudioSink,
+    aSink: AudioSink,
     vSink: VideoSink,
     loader: FFmpegFrameLoader
 ) : BaseJavaCvPlayer<JvmVideoFrame, JvmAudioFrame>(vQueue, aQueue, aSink, vSink, loader) {
-
     companion object {
-        /**
-         * 建立播放器實例。
-         * @param videoSink 必須由外部注入（例如來自 :core-video-javafx, :core-video-swing 或 :core-video-compose）
-         */
-        fun create(videoSink: VideoSink): JvmJavaCvPlayer {
-            val vQueue = DefaultMediaFrameQueue<JvmVideoFrame>(240)
-            val aQueue = DefaultMediaFrameQueue<JvmAudioFrame>(480)
-            val aSink = JvmAudioSink()
-            
-            val loader = FFmpegFrameLoader(vQueue, aQueue)
-            
-            // 根據 Sink 自動調整解碼格式
-            loader.setPreferredPixelFormat(videoSink.preferredPixelFormat)
-
-            return JvmJavaCvPlayer(vQueue, aQueue, aSink, videoSink, loader)
+        fun create(
+            videoSink: VideoSink,
+            audioSink: AudioSink
+        ): JavaCvPlayer {
+            return Builder()
+                .setVideoSink(videoSink)
+                .setAudioSink(audioSink)
+                .build()
         }
     }
 
-    private val logger = Logger.withTag("JvmJavaCvPlayer")
+    /**
+     * 播放器組裝器。
+     */
+    class Builder {
+        private var videoSink: VideoSink? = null
+        private var audioSink: AudioSink? = null
+        private var maxVideoBuffer: Int = 240
+        private var maxAudioBuffer: Int = 480
+        private var preferredPixelFormat: Int? = null
+        private val ffmpegOptions = mutableMapOf<String, String>()
+
+        fun setVideoSink(videoSink: VideoSink) = apply { this.videoSink = videoSink }
+        fun setAudioSink(audioSink: AudioSink) = apply { this.audioSink = audioSink }
+
+        /** 設定影片緩衝區最大影格數 (預設 240) */
+        fun setMaxVideoBuffer(size: Int) = apply { this.maxVideoBuffer = size }
+
+        /** 設定音訊緩衝區最大影格數 (預設 480) */
+        fun setMaxAudioBuffer(size: Int) = apply { this.maxAudioBuffer = size }
+
+        /** 設定解碼輸出的像素格式 (若未設定，則使用 VideoSink 的預設值) */
+        fun setPreferredPixelFormat(format: Int) = apply { this.preferredPixelFormat = format }
+
+        /** 設定 FFmpeg 選項 (如 probesize, analyzeduration, rtsp_transport 等) */
+        fun setFFmpegOptions(options: Map<String, String>) = apply {
+            this.ffmpegOptions.putAll(options)
+        }
+
+        /** 新增單一 FFmpeg 選項 */
+        fun addFFmpegOption(key: String, value: String) = apply {
+            this.ffmpegOptions[key] = value
+        }
+
+        fun build(): JavaCvPlayer {
+            val vs = videoSink ?: throw IllegalStateException("VideoSink must be set")
+            val asink = audioSink ?: throw IllegalStateException("AudioSink must be set")
+
+            val vQueue = DefaultMediaFrameQueue<JvmVideoFrame>(maxVideoBuffer)
+            val aQueue = DefaultMediaFrameQueue<JvmAudioFrame>(maxAudioBuffer)
+            val loader = FFmpegFrameLoader(vQueue, aQueue)
+
+            // 設定自定義 FFmpeg 選項
+            loader.setFFmpegOptions(ffmpegOptions)
+
+            // 優先使用 Builder 設定的格式，否則由 Sink 決定
+            loader.setPreferredPixelFormat(preferredPixelFormat ?: vs.preferredPixelFormat)
+
+            return JavaCvPlayer(vQueue, aQueue, asink, vs, loader)
+        }
+    }
+
+    private val logger = Logger.withTag("JavaCvPlayer")
     private var totalAudioFramesWritten = 0L
     private val videoCatchUpDropThresholdUs = 60_000L
     private var loopIteration = 0L
+    private var reusableAudioBuffer: ShortArray? = null
 
     private var videoJob: Job? = null
     private var audioJob: Job? = null
 
-    /** 影像幀輸出管道 (保留回呼彈性) */
     var videoFrameOutput: VideoFrameOutput? = null
 
-    /** 取得影像 Sink (可轉型為具體環境的實作以獲取 View) */
-    fun getPlayerVideoSink(): VideoSink = videoSink as VideoSink
+    fun getPlayerVideoSink(): VideoSink = videoSink
 
     override fun onReset() {
         videoFrameOutput?.onFrameAvailable(null)
@@ -77,10 +121,6 @@ class JvmJavaCvPlayer private constructor(
             if (audioSink.isRunning) {
                 audioSink.pause()
             }
-        }
-        // 印出當前狀態，診斷為何不播
-        if (loopIteration % 50L == 0L) {
-            logger.d { "Watchdog: state=$playbackState, ready=$playWhenReady, loops=${videoJob?.isActive == true}" }
         }
         delay(30)
     }
@@ -104,126 +144,89 @@ class JvmJavaCvPlayer private constructor(
     private suspend fun audioRenderLoop() {
         try {
             val clock = getClock()
-            val audioBufferLimitUs = 200_000L // Increased buffer for smoother playback
-            logger.i { "audioRenderLoop started" }
-            
+            val audioBufferLimitUs = 200_000L
             while (coroutineContext.isActive) {
                 val frame = audioQueue.peek()
                 if (frame == null) {
                     delay(10)
                     continue
                 }
-
                 val speed = playbackParameters.speed
                 val currentClockUs = clock.getPositionMicros(audioSink)
                 val audioRelTs = frame.timestampUs
-
-                // Always write if clock isn't started or we haven't set initial audio TS yet
-                val shouldWrite = if (!clock.isStarted) {
-                    true
-                } else {
-                    // Feed audio if we haven't reached the buffer limit ahead of the clock
-                    audioRelTs <= currentClockUs + (audioBufferLimitUs * speed).toLong()
-                }
+                val shouldWrite = if (!clock.isStarted) true
+                else audioRelTs <= currentClockUs + (audioBufferLimitUs * speed).toLong()
 
                 if (shouldWrite) {
                     val dequeuedFrame = audioQueue.dequeue() ?: continue
                     writeAudioToSink(dequeuedFrame)
                 } else {
-                    // We have enough audio buffered, wait a bit
                     delay(20)
                 }
             }
         } catch (e: Exception) {
             if (e !is CancellationException) logger.e(e) { "audioRenderLoop crashed" }
-        } finally {
-            logger.i { "audioRenderLoop finished" }
         }
     }
 
     private suspend fun videoRenderLoop() {
         try {
             val clock = getClock()
-            logger.i { "videoRenderLoop started" }
-            
             while (coroutineContext.isActive) {
                 loopIteration++
                 val frame = videoQueue.dequeue() ?: run {
-                    if (loopIteration % 100L == 0L) {
-                        logger.d { "videoRenderLoop: waiting for frame... q_v=${videoQueue.size} q_a=${audioQueue.size}" }
-                    }
                     delay(10)
                     continue
                 }
-
                 try {
                     if (!clock.isStarted) {
                         clock.init(frame.timestampUs, audioSink.positionFrames)
-                        logger.i { "Starting clock via VideoFrame. TS: ${frame.timestampUs}" }
                     }
-
                     val videoPtsUs = frame.timestampUs
                     val currentClockUs = clock.getPositionMicros(audioSink)
                     val diffUs = videoPtsUs - currentClockUs
 
-                    // AVSync decision logic
-                    if (diffUs > 5_000) { // 降低閾值到 5ms
+                    if (diffUs > 5_000) {
                         val waitMs = (diffUs / 1000).coerceAtMost(50)
                         if (waitMs > 1) delay(waitMs)
                     }
 
-                    // Re-check clock after potential delay
                     val currentClockUsAfterWait = clock.getPositionMicros(audioSink)
                     val finalDiffUs = videoPtsUs - currentClockUsAfterWait
 
-                    // 如果太遲（超過 60ms），則丟棄
                     if (finalDiffUs < -videoCatchUpDropThresholdUs) {
-                        if (loopIteration % 100L == 0L) {
-                            logger.w { "Video too late (${-finalDiffUs / 1000}ms), dropping frame. Clock=${currentClockUsAfterWait} Frame=${videoPtsUs}" }
-                        }
+                        // Drop frame
                     } else {
                         videoSink.render(frame, videoPtsUs)
                     }
-
-                    if (loopIteration % 60L == 0L) { // 減少日誌頻率
-                        logger.v { "AVSync: vPts=$videoPtsUs, clock=$currentClockUsAfterWait, diff=$finalDiffUs, qV=${videoQueue.size}" }
-                    }
-                    loopIteration++
                 } finally {
                     frame.release()
                 }
-
                 yield()
             }
         } catch (e: Exception) {
             if (e !is CancellationException) logger.e(e) { "videoRenderLoop crashed" }
-        } finally {
-            logger.i { "videoRenderLoop finished" }
         }
     }
 
     private fun writeAudioToSink(frame: JvmAudioFrame) {
         val clock = getClock()
-        
-        // Ensure initial audio timestamp is set (used by MediaClock as anchor)
         clock.setInitialAudioTimestamp(frame.timestampUs)
-
-        // If clock isn't started yet, use this audio frame to initialize it
         if (!clock.isStarted) {
             clock.init(frame.timestampUs, audioSink.positionFrames)
-            logger.i { "Starting clock via AudioFrame. TS: ${frame.timestampUs}" }
         }
-        
-        // Explicitly start audio sink if it's not running
         if (!audioSink.isRunning) {
             audioSink.play()
         }
-
         val samples = frame.internalFrame.samples[0] as java.nio.ShortBuffer
-        val data = ShortArray(samples.remaining())
-        samples.get(data)
-        
-        val writtenFrames = audioSink.write(data, 0, data.size)
+        val remaining = samples.remaining()
+        var data = reusableAudioBuffer
+        if (data == null || data.size < remaining) {
+            data = ShortArray(remaining)
+            reusableAudioBuffer = data
+        }
+        samples.get(data, 0, remaining)
+        val writtenFrames = audioSink.write(data, 0, remaining)
         if (writtenFrames > 0) {
             totalAudioFramesWritten += writtenFrames
             clock.updateAudioProgress(totalAudioFramesWritten)

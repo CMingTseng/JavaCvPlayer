@@ -17,12 +17,14 @@ import idv.neo.ffmpeg.media.player.core.time.KmpMediaClock
 import idv.neo.ffmpeg.media.player.core.video.VideoSink
 import kotlinx.coroutines.*
 import co.touchlab.kermit.Logger
+import idv.neo.ffmpeg.media.player.core.buffer.MediaFrame
+import idv.neo.ffmpeg.media.player.core.loader.FrameMetadata
 
 /**
  * JavaCvPlayer 的核心實作，參考 Media3 ExoPlayerImpl 的結構。
  */
 @OptIn(UnstableApi::class)
-abstract class BaseJavaCvPlayer<V : VideoFrame, A : VideoFrame>(
+abstract class BaseJavaCvPlayer<V : MediaFrame, A : MediaFrame>(
     protected val videoQueue: MediaFrameQueue<V>,
     protected val audioQueue: MediaFrameQueue<A>,
     protected val audioSink: AudioSink,
@@ -119,7 +121,7 @@ abstract class BaseJavaCvPlayer<V : VideoFrame, A : VideoFrame>(
     private var _duration = 0L
     override val duration: Long get() = _duration
 
-    protected var currentMetadata: FrameLoader.Metadata? = null
+    protected var currentMetadata: FrameMetadata? = null
         private set
 
     override val bufferedPosition: Long
@@ -310,7 +312,7 @@ abstract class BaseJavaCvPlayer<V : VideoFrame, A : VideoFrame>(
     override fun setVideoTextureView(textureView: Any?) {}
     override fun clearVideoTextureView(textureView: Any?) {}
 
-    protected open fun onMetadataLoaded(metadata: FrameLoader.Metadata) {
+    protected open fun onMetadataLoaded(metadata: FrameMetadata) {
         videoWidth = metadata.width
         videoHeight = metadata.height
         

@@ -10,7 +10,7 @@ import kotlinx.coroutines.sync.withLock
 /**
  * 預設的影格佇列實作。
  */
-class DefaultMediaFrameQueue<T : VideoFrame>(
+class DefaultMediaFrameQueue<T : MediaFrame>(
     private val capacity: Int = 60
 ) : MediaFrameQueue<T> {
 

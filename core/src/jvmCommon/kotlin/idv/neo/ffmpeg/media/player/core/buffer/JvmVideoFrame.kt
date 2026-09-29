@@ -11,8 +11,8 @@ import java.nio.ByteBuffer
  */
 class JvmVideoFrame(
     val internalFrame: Frame
-) : VideoFrame, VideoFrameData {
-    
+) : MediaFrame, VideoFrameData {
+
     override val timestampUs: Long = internalFrame.timestamp
     override val width: Int get() = internalFrame.imageWidth
     override val height: Int get() = internalFrame.imageHeight
@@ -26,10 +26,14 @@ class JvmVideoFrame(
         val image = internalFrame.image ?: return null
         if (image.isEmpty()) return null
         val data: Any = image[0] ?: return null
-        
+
         return when (data) {
             is Pointer -> data.asByteBuffer()
-            is ByteBuffer -> data.duplicate().rewind()
+            is ByteBuffer -> data.duplicate().apply { rewind() }
+            is java.nio.Buffer -> {
+                // 強制轉型為 ByteBuffer (JavaCV 的 Frame image buffer 通常是 ByteBuffer)
+                (data as? ByteBuffer)?.duplicate()?.apply { rewind() }
+            }
             else -> null
         }
     }

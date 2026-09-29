@@ -27,6 +27,7 @@ class SkiaVideoSink : VideoSink {
     var currentBitmap: Bitmap? = null
         private set
 
+    private var cachedImage: Image? = null
     private var pixelBuffer: ByteArray? = null
 
     override fun setVideoSize(width: Int, height: Int) {
@@ -36,10 +37,12 @@ class SkiaVideoSink : VideoSink {
                 this.videoHeight = height
                 logger.i { "SkiaVideoSink size set to: ${width}x${height}" }
                 
+                cachedImage?.close()
                 currentBitmap?.close()
                 val newBitmap = Bitmap()
                 newBitmap.allocPixels(ImageInfo(width, height, ColorType.RGBA_8888, ColorAlphaType.PREMUL))
                 currentBitmap = newBitmap
+                cachedImage = Image.makeFromBitmap(newBitmap)
                 pixelBuffer = ByteArray(width * height * 4)
                 
                 _frameSignal.value = -1L // 初始重置
@@ -82,6 +85,9 @@ class SkiaVideoSink : VideoSink {
                 bitmap.installPixels(imageInfo, dstBuffer, dstStride)
                 bitmap.notifyPixelsChanged()
                 
+                cachedImage?.close()
+                cachedImage = Image.makeFromBitmap(bitmap)
+
                 // 更新脈衝，觸發 UI 重繪
                 _frameSignal.value = System.nanoTime()
             } catch (e: Exception) {
@@ -95,22 +101,17 @@ class SkiaVideoSink : VideoSink {
      */
     fun drawFrame(canvas: Canvas, dstWidth: Float, dstHeight: Float) {
         synchronized(lock) {
-            val bitmap = currentBitmap ?: return
-            if (bitmap.isClosed || bitmap.width <= 0 || bitmap.height <= 0) return
+            val image = cachedImage ?: return
+            if (image.isClosed || image.width <= 0 || image.height <= 0) return
             try {
-                val image = Image.makeFromBitmap(bitmap)
-                try {
-                    canvas.drawImageRect(
-                        image,
-                        Rect.makeWH(bitmap.width.toFloat(), bitmap.height.toFloat()),
-                        Rect.makeWH(dstWidth, dstHeight),
-                        SamplingMode.LINEAR,
-                        null,
-                        true
-                    )
-                } finally {
-                    image.close()
-                }
+                canvas.drawImageRect(
+                    image,
+                    Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
+                    Rect.makeWH(dstWidth, dstHeight),
+                    SamplingMode.LINEAR,
+                    null,
+                    true
+                )
             } catch (e: Exception) {
                 logger.e(e) { "Failed to draw frame in SkiaVideoSink" }
             }
@@ -126,6 +127,8 @@ class SkiaVideoSink : VideoSink {
 
     override fun release() {
         synchronized(lock) {
+            cachedImage?.close()
+            cachedImage = null
             currentBitmap?.close()
             currentBitmap = null
             pixelBuffer = null

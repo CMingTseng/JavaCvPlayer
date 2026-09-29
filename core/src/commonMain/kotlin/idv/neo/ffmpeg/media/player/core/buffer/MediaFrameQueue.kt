@@ -5,14 +5,13 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * 影格佇列介面。
  */
-interface MediaFrameQueue<T : VideoFrame> {
+interface MediaFrameQueue<T : MediaFrame> {
     suspend fun enqueue(frame: T)
     suspend fun dequeue(): T?
     suspend fun peek(): T?
 
     /** 清空佇列。必須是非掛起函數。 */
     fun clear()
-
     val size: Int
     val isEmpty: Boolean
     val bufferedDurationUs: Long

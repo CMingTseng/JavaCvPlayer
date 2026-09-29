@@ -16,13 +16,19 @@ interface AudioSink {
     /** 獲取目前播放位置 (微秒) */
     fun getPlaybackHeadPositionUs(): Long
 
-    /** 寫入音訊資料 (支援 ShortArray 較符合多數平台底層) */
+    /**
+     * 寫入音頻數據
+     * @param buffer 支援音頻採樣的 ShortArray較符合多數平台底層
+     * @param offset 起始位置
+     * @param size 數據長度
+     * @return 實際寫入的影格數 (frames)
+     */
     fun write(buffer: ShortArray, offset: Int, size: Int): Int
 
-    /** 設置播放速度 */
+    /** 設置播放速度 (1.0f 為正常速度) */
     fun setPlaybackSpeed(speed: Float)
 
-    /** 設置音量 (0.0 ~ 1.0) */
+    /** 設置音量 (0.0f ~ 1.0f) */
     fun setVolume(volume: Float)
 
     /** 初始化設定 */

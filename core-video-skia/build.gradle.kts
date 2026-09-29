@@ -1,5 +1,7 @@
 plugins {
-    kotlin("multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.compose.compiler)
     `maven-publish`
 }
 
@@ -17,7 +19,7 @@ kotlin {
                 implementation(project(":core"))
 //                implementation(project(":lib-common-lite"))
                 implementation("com.github.cybernhl.media:lib-common-lite:727538c430")
-                implementation(libs.skiko)
+                implementation(compose.desktop.currentOs)
                 implementation(libs.kermit)
 
                 compileOnly("org.bytedeco:ffmpeg:${libs.versions.ffmpeg.get()}")

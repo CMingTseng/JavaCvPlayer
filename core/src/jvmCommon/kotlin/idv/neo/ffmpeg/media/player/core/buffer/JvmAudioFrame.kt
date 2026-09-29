@@ -7,8 +7,8 @@ import org.bytedeco.javacv.Frame
  */
 class JvmAudioFrame(
     val internalFrame: Frame
-) : VideoFrame { // 這裡暫時實作 VideoFrame 介面以便共用 Queue，未來可抽換為更通用的 MediaFrame
-    
+) : MediaFrame { // 這裡暫時實作 MediaFrame 介面以便共用 Queue，未來可抽換為更通用的 MediaFrame
+
     override val timestampUs: Long = internalFrame.timestamp
 
     override fun release() {
