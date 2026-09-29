@@ -1,0 +1,41 @@
+{
+  "project": "JavaCvPlayer Compose & Skia Optimization",
+  "current_phase": 1,
+  "steps": [
+    {
+      "id": 1,
+      "phase": "基礎架構重構",
+      "task": "定義 VideoFrameProcessor 與擴展 VideoSink 介面",
+      "status": "DONE",
+      "details": "已完成 :core 模組中的介面定義與 FFmpegFrameLoader 整合。"
+    },
+    {
+      "id": 2,
+      "phase": "Android 渲染端實作",
+      "task": "實作 AndroidSurfaceVideoSink",
+      "status": "TODO",
+      "details": "實作使用 Surface.lockHardwareCanvas() 繪製 JavaCV Frame 的邏輯。"
+    },
+    {
+      "id": 3,
+      "phase": "Android 特效鏈實作",
+      "task": "實作 OpenCVVideoFrameProcessor",
+      "status": "TODO",
+      "details": "建立基於 OpenCV 的旋轉與濾鏡處理器，驗證與 SurfaceSink 的串接。"
+    },
+    {
+      "id": 4,
+      "phase": "Desktop 渲染優化",
+      "task": "實作 SkiaVideoSink (Skiko)",
+      "status": "TODO",
+      "details": "利用 installPixels 達成 JVM 端的 Zero-copy 渲染。"
+    },
+    {
+      "id": 5,
+      "phase": "CMP 介面整合",
+      "task": "封裝 VideoPlayerCanvas (expect/actual)",
+      "status": "TODO",
+      "details": "在 ui-compose 模組提供跨平台一致的 UI 組件。"
+    }
+  ]
+}

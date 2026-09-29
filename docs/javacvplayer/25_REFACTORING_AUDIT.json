@@ -1,0 +1,76 @@
+{
+  "project": "JavaCvPlayer",
+  "plan_reference": "25_modular_video_sink_refactoring_plan.md",
+  "last_updated": "2024-05-23",
+  "status": "IN_PROGRESS",
+  "phases": [
+    {
+      "id": 1,
+      "name": "Phase 1: Cleanup Core Module (:core)",
+      "steps": [
+        {
+          "id": "1.1",
+          "description": "Define VideoSink interface in :core commonMain",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "1.2",
+          "description": "Remove JavaFX/Swing implementations from :core",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "1.3",
+          "description": "Remove org.openjfx dependencies from :core build.gradle.kts",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "1.4",
+          "description": "Update VideoSinkFactory to dynamic injection",
+          "status": "COMPLETED"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Phase 2: Establish Renderer Submodules",
+      "steps": [
+        {
+          "id": "2.1",
+          "description": "Establish libraries/core-video-javafx",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "2.2",
+          "description": "Establish libraries/core-video-swing",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "2.3",
+          "description": "Establish libraries/core-video-android",
+          "status": "COMPLETED"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Phase 3: Demo Projects and Injection Logic",
+      "steps": [
+        {
+          "id": "3.1",
+          "description": "Update JavaFxDemo with manual injection",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "3.2",
+          "description": "Update SwingDemo with manual injection",
+          "status": "COMPLETED"
+        },
+        {
+          "id": "3.3",
+          "description": "Verify Android module compilation",
+          "status": "COMPLETED"
+        }
+      ]
+    }
+  ]
+}

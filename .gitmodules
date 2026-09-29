@@ -1,0 +1,3 @@
+[submodule "media3_exoplyaer"]
+	path = media3_exoplyaer
+	url = git@github.com:cybernhl/media.git
