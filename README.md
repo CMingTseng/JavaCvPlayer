@@ -90,6 +90,27 @@
 
 ---
 
+## 🚀 JitPack 發布與 Group ID 命名規則說明
+
+### 1. Group ID 與快取路徑差異
+- **JitPack 遠端依賴 (`jitpack.io`)**：
+  - **Group ID 命名規則**：JitPack 會強制依據 GitHub 帳號與儲存庫名稱為 Group ID 命名，即 `com.github.CMingTseng.JavaCvPlayer`。
+  - **引用範例**：`implementation("com.github.CMingTseng.JavaCvPlayer:core:v1.0.2")`
+  - **Gradle 下載快取目錄**：`~/.gradle/caches/modules-2/files-2.1/com.github.CMingTseng.JavaCvPlayer/`
+- **本地發布 (`publishToMavenLocal`)**：
+  - **Group ID**：`idv.neo.ffmpeg.media.player`
+  - **本地 Maven 倉庫目錄**：`~/.m2/repository/idv/neo/ffmpeg/media/player/`
+
+### 2. 開發與部署模式切換
+- **切換為本地源碼開發**：
+  1. 取消 `settings.gradle.kts` 中 `includeExternalProject` 相關行的註解。
+  2. 在各應用模組的 `build.gradle.kts` 中解開 `project(":core")` 等本地工程依賴。
+- **切換為 JitPack 遠端依賴**：
+  1. 註解 `settings.gradle.kts` 中的 `includeExternalProject` 行。
+  2. 在各應用模組的 `build.gradle.kts` 中開啟 `com.github.CMingTseng.JavaCvPlayer:*:v1.0.2` 依賴。
+
+---
+
 ## 🔗 Media3 ExoPlayer 的載入與整合形式
 
 `media3_exoplyaer` 與本專案的整合採用了**「 Git 子模組 (Git Submodule) + Maven 遠端/預編譯構件 (Remote Artifact)」**雙軌機制：
