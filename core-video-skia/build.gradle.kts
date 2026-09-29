@@ -1,6 +1,10 @@
 plugins {
     kotlin("multiplatform")
+    `maven-publish`
 }
+
+group = "idv.neo.ffmpeg.media.player"
+version = "1.0-SNAPSHOT"
 
 kotlin {
     jvm()

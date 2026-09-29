@@ -1,13 +1,19 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    `maven-publish`
 }
+
+group = "idv.neo.ffmpeg.media.player"
+version = "1.0-SNAPSHOT"
 
 kotlin {
     jvm {
         compilations.all {
             compileTaskProvider.configure {
                 compilerOptions {
-                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+                    jvmTarget.set(JvmTarget.JVM_11)
                 }
             }
         }
