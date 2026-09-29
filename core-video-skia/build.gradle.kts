@@ -20,7 +20,7 @@ kotlin {
                 implementation(libs.skiko)
                 implementation(libs.kermit)
 
-                compileOnly(libs.org.bytedeco.ffmpeg)
+                compileOnly(libs.org.bytedeco.ffmpeg.asProvider())
                 compileOnly(libs.org.bytedeco.javacv.platform)
             }
         }
