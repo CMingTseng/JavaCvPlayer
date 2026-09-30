@@ -22,7 +22,7 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kermit)
 
-                compileOnly(libs.org.bytedeco.ffmpeg)
+                compileOnly(libs.org.bytedeco.ffmpeg.platform.gpl)
                 compileOnly(libs.org.bytedeco.javacv.platform)
             }
         }
