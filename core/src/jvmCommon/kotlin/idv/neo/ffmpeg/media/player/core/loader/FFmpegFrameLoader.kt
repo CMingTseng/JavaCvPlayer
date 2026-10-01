@@ -79,6 +79,8 @@ class FFmpegFrameLoader(
                 initGrabber(url)
                 val g = grabber!!
 
+                logger.i { "FFmpegOptions at start ($url): ${g.options}" }
+
                 // 設定解碼器輸出格式，這必須在 start() 之前
                 g.pixelFormat = preferredPixelFormat
 
@@ -86,7 +88,16 @@ class FFmpegFrameLoader(
                     g.start()
                 } catch (e: Exception) {
                     val msg = e.message ?: ""
-                    if (msg.contains("avcodec_find_decoder") || msg.contains("Unsupported audio format")) {
+                    if (g.videoCodecName != null && (msg.contains("avcodec_find_decoder") || msg.contains("Decoder not found") || msg.contains("Failed to open"))) {
+                        logger.w { "Hardware/Custom video decoder '${g.videoCodecName}' failed ($msg). Retrying with default software decoder..." }
+                        releaseGrabber()
+                        initGrabber(url)
+                        grabber?.let { newGrabber ->
+                            newGrabber.videoCodecName = null
+                            newGrabber.pixelFormat = preferredPixelFormat
+                            newGrabber.start()
+                        }
+                    } else if (msg.contains("avcodec_find_decoder") || msg.contains("Unsupported audio format")) {
                         logger.w { "Audio decoder not found ($msg). Retrying without audio..." }
                         // 釋放目前的 grabber 並重新初始化一個不含音軌的
                         releaseGrabber()
@@ -186,6 +197,19 @@ class FFmpegFrameLoader(
             if (!ffmpegOptions.containsKey("sws_flags")) setOption("sws_flags", "bicubic")
             if (!ffmpegOptions.containsKey("probesize")) setOption("probesize", "50000000")
             if (!ffmpegOptions.containsKey("analyzeduration")) setOption("analyzeduration", "50000000")
+
+            // 硬體加速與自訂 Video Codec 處理
+            val customCodec = ffmpegOptions["vcodec"]
+                ?: ffmpegOptions["video_codec"]
+                ?: ffmpegOptions["video_codec_name"]
+
+            if (customCodec != null) {
+                videoCodecName = customCodec
+                logger.i { "Using custom video decoder codecName: $customCodec" }
+            } else if (ffmpegOptions["hwaccel"] == "mediacodec") {
+                videoCodecName = "h264_mediacodec"
+                logger.i { "hwaccel=mediacodec specified, setting videoCodecName to h264_mediacodec" }
+            }
 
             // 套用所有自定義選項
             ffmpegOptions.forEach { (k, v) ->

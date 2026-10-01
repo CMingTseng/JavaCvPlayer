@@ -61,8 +61,8 @@ kotlin {
 
         jvmMain.dependencies {
             implementation(libs.kotlinx.coroutines.swing)
-            implementation(libs.org.bytedeco.javacv.platform)
-            implementation(libs.org.bytedeco.ffmpeg.platform.gpl)
+            compileOnly(libs.org.bytedeco.javacv.platform)
+            compileOnly(libs.org.bytedeco.ffmpeg.platform.gpl)
             api(project(":core-video-skia"))
         }
         androidMain.dependencies {

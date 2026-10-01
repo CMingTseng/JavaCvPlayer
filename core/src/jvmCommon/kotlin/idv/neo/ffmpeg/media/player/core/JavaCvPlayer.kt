@@ -26,13 +26,16 @@ class JavaCvPlayer private constructor(
     loader: FFmpegFrameLoader
 ) : BaseJavaCvPlayer<JvmVideoFrame, JvmAudioFrame>(vQueue, aQueue, aSink, vSink, loader) {
     companion object {
+        @JvmOverloads
         fun create(
             videoSink: VideoSink,
-            audioSink: AudioSink
+            audioSink: AudioSink,
+            options: Map<String, String> = emptyMap()
         ): JavaCvPlayer {
             return Builder()
                 .setVideoSink(videoSink)
                 .setAudioSink(audioSink)
+                .setFFmpegOptions(options)
                 .build()
         }
     }

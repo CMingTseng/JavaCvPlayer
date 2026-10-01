@@ -42,10 +42,10 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.serialization.core)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.jetbrains.compose.runtime)
+                compileOnly(libs.kotlinx.serialization.core)
+                compileOnly(libs.kotlinx.serialization.json)
+                compileOnly(libs.kotlinx.coroutines.core)
+                compileOnly(libs.jetbrains.compose.runtime)
                 implementation(libs.kermit)
                 compileOnly("com.github.cybernhl.media:lib-common-lite:727538c430")
             }
