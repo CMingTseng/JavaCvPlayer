@@ -83,7 +83,7 @@ kotlin {
 
 android {
     namespace = "idv.neo.ffmpeg.media.player"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
         minSdk = 21
     }
