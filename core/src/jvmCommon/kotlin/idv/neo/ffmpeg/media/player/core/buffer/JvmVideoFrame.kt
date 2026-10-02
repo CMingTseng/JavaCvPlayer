@@ -4,22 +4,35 @@ import idv.neo.ffmpeg.media.player.core.video.VideoFrameData
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacpp.Pointer
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * JVM 端的影格實作，包裝 JavaCV 的 Frame。
  * 實作 VideoFrameData 以便在不依賴 JavaCV 的情況下傳輸數據。
  */
-class JvmVideoFrame(
-    val internalFrame: Frame
-) : MediaFrame, VideoFrameData {
+class JvmVideoFrame( val internalFrame: Frame) : MediaFrame, VideoFrameData {
+    private val refCount = AtomicInteger(1)
 
     override val timestampUs: Long = internalFrame.timestamp
     override val width: Int get() = internalFrame.imageWidth
     override val height: Int get() = internalFrame.imageHeight
     override val stride: Int get() = getStrideInternal()
 
+    /** 增加引用計數 */
+    fun retain(): JvmVideoFrame {
+        refCount.incrementAndGet()
+        return this
+    }
+
+    /** 減少引用計數，若歸零則真正釋放底層 Native 資源 */
     override fun release() {
-        internalFrame.close()
+        if (refCount.decrementAndGet() == 0) {
+            try {
+                internalFrame.close()
+            } catch (_: Exception) {
+                // Ignore
+            }
+        }
     }
 
     override fun getByteBuffer(): ByteBuffer? {
